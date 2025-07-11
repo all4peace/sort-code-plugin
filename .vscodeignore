@@ -1,0 +1,6 @@
+# Everything except the bundled output
+**/*
+!dist/extension.js
+!package.json
+!LICENSE
+!README.md
