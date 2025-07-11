@@ -1,0 +1,82 @@
+{
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascriptreact"
+  ],
+  "categories": [
+    "Formatters",
+    "Other"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "category": "Sort Code",
+        "command": "sortCodePlugin.sortCurrentFile",
+        "title": "Sort Functions in Current File"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "sortCodePlugin.sortCurrentFile",
+        "key": "ctrl+m ctrl+z",
+        "mac": "cmd+m cmd+z",
+        "when": "editorTextFocus && (editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "sortCodePlugin.sortCurrentFile",
+          "when": "editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "sortCodePlugin.sortCurrentFile",
+          "group": "1_modification",
+          "when": "resourceExtname == .ts || resourceExtname == .js || resourceExtname == .tsx || resourceExtname == .jsx"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "ts-morph": "^17.0.1"
+  },
+  "description": "Sort TypeScript and JavaScript functions alphabetically with public functions on top",
+  "devDependencies": {
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "@vscode/test-electron": "^2.3.0",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-sort-keys-fix": "^1.1.2",
+    "mocha": "^10.1.0",
+    "prettier": "^3.6.1",
+    "typescript": "^4.9.4"
+  },
+  "displayName": "Sort Code Functions",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "main": "./dist/extension.js",
+  "name": "sort-code-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/all4peace/sort-code-plugin"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "pretest": "npm run build && npm run lint",
+    "test": "tsx src/test/runTest.ts",
+    "vscode:prepublish": "npm run build",
+    "watch": "tsc -watch -p ./"
+  },
+  "type": "module",
+  "version": "1.0.0"
+}
