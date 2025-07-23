@@ -14,8 +14,10 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
 
-    if (!isSupportedLanguage(editor.document.languageId)) {
-      vscode.window.showWarningMessage("This command only works with TypeScript and JavaScript files.");
+    if (!isSupportedFile(editor.document)) {
+      vscode.window.showWarningMessage(
+        "This command only works with TypeScript and JavaScript files (.ts, .js, .tsx, .jsx, .mjs, .cjs, .mts, .cts)."
+      );
       return;
     }
 
@@ -34,6 +36,15 @@ export function deactivate(): void {
   console.log("Sort Code Plugin deactivated.");
 }
 
-function isSupportedLanguage(languageId: string): boolean {
-  return ["typescript", "javascript", "typescriptreact", "javascriptreact"].includes(languageId);
+function isSupportedFile(document: vscode.TextDocument): boolean {
+  // Check language ID first
+  const supportedLanguageIds = ["typescript", "javascript", "typescriptreact", "javascriptreact"];
+  if (supportedLanguageIds.includes(document.languageId)) {
+    return true;
+  }
+
+  // Check file extension as backup for files that might not have the correct language ID
+  const fileName = document.fileName.toLowerCase();
+  const supportedExtensions = [".ts", ".js", ".tsx", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
+  return supportedExtensions.some(ext => fileName.endsWith(ext));
 }

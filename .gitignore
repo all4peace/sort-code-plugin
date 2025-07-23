@@ -110,3 +110,6 @@ dev/*
 
 # Temporary files
 temp
+
+# Output files
+test-cases/output/*

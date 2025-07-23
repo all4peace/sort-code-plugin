@@ -41,7 +41,7 @@ function processPayment(amount: number): boolean {
 /**
  * Sends email notifications
  */
-function sendNotification(email: string, message: string): void {
+async function sendNotification(email: string, message: string): void {
   console.log(`Sending to ${email}: ${message}`);
 }
 

@@ -11,7 +11,7 @@ export function authenticateUser(username: string, password: string): boolean {
 /**
  * Calculates the sum of two numbers
  */
-export function calculateSum(a: number, b: number): number {
+    export function calculateSum(a: number, b: number): number {
   return a + b;
 }
 

@@ -50,8 +50,11 @@ export enum Role {
   Guest,
 }
 
+export default AuthService;
 // Service class for authentication
 class AuthService {
+  // random comment
+
   // Singleton instance generator
   static getInstance(): AuthService {
     return new AuthService();
@@ -70,5 +73,3 @@ class AuthService {
   // Token storage (not persisted)
   private token: string = "";
 }
-
-export default AuthService;

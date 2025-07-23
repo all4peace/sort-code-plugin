@@ -29,35 +29,31 @@
       "commandPalette": [
         {
           "command": "sortCodePlugin.sortCurrentFile",
-          "when": "editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact"
+          "when": "editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact || resourceExtname =~ /\\.(ts|js|tsx|jsx|mjs|cjs|mts|cts)$/"
         }
       ],
       "editor/context": [
         {
           "command": "sortCodePlugin.sortCurrentFile",
           "group": "1_modification",
-          "when": "resourceExtname == .ts || resourceExtname == .js || resourceExtname == .tsx || resourceExtname == .jsx"
+          "when": "resourceExtname =~ /\\.(ts|js|tsx|jsx|mjs|cjs|mts|cts)$/"
         }
       ]
     }
   },
-  "dependencies": {
-    "ts-morph": "^17.0.1"
-  },
-  "description": "Sort TypeScript and JavaScript functions alphabetically with public functions on top",
+  "dependencies": {},
+  "description": "Sort TypeScript and JavaScript functions alphabetically with public functions on top. Supports .ts, .js, .tsx, .jsx, .mjs, .cjs, .mts, .cts files",
   "devDependencies": {
-    "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
-    "@vscode/test-electron": "^2.3.0",
     "esbuild": "^0.25.6",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-sort-keys-fix": "^1.1.2",
-    "mocha": "^10.1.0",
     "prettier": "^3.6.1",
+    "tsx": "^4.19.2",
     "typescript": "^4.9.4"
   },
   "displayName": "Sort Code Functions",
@@ -84,5 +80,5 @@
     "watch": "node esbuild.js --watch"
   },
   "type": "module",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

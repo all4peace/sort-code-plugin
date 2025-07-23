@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-import { FunctionSorter } from "../coreFunctionSorter.js";
+import { CodeSorter } from "../sort.js";
 
 interface TestCase {
   name: string;
@@ -10,44 +10,48 @@ interface TestCase {
   expectedFile: string;
 }
 
+// Run tests if this file is executed directly
+async function main() {
+  try {
+    console.log("🚀 Function Sort Extension Test Suite");
+    console.log("=====================================\n");
+
+    const tester = new FunctionSortTester();
+
+    await tester.runAllTests();
+  } catch (err) {
+    console.error("Failed to run tests", err);
+    process.exit(1);
+  }
+}
+
 class FunctionSortTester {
   private testCasesDir: string;
-  private functionSorter: FunctionSorter;
+  private functionSorter: CodeSorter;
 
   constructor() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
     this.testCasesDir = path.resolve(__dirname, "../../test-cases");
-    this.functionSorter = new FunctionSorter();
+    this.functionSorter = new CodeSorter();
   }
 
   async runAllTests(): Promise<void> {
     console.log("🧪 Running Function Sort Tests");
     console.log("================================");
 
-    const testCases: TestCase[] = [
-      {
-        expectedFile: "basic-functions.ts",
-        inputFile: "basic-functions.ts",
-        name: "Basic Functions"
-      },
-      {
-        expectedFile: "class-methods.ts",
-        inputFile: "class-methods.ts",
-        name: "Class Methods"
-      },
-      {
-        expectedFile: "mixed-functions.ts",
-        inputFile: "mixed-functions.ts",
-        name: "Mixed Function Types"
-      },
-      {
-        expectedFile: "complex.ts",
-        inputFile: "complex.ts",
-        name: "Complex Functions"
-      }
-    ];
+    // Automatically discover test cases from input folder
+    const testCases = this.discoverTestCases();
+
+    if (testCases.length === 0) {
+      console.log("❌ No test files found in test-cases/input/ folder");
+      return;
+    }
+
+    console.log(`📁 Found ${testCases.length} test file(s):`);
+    testCases.forEach((test: TestCase) => console.log(`   - ${test.name}`));
+    console.log();
 
     let passedTests = 0;
     let totalTests = testCases.length;
@@ -73,10 +77,31 @@ class FunctionSortTester {
     console.log(`❌ Failed: ${totalTests - passedTests}/${totalTests}`);
 
     if (passedTests === totalTests) {
-      console.log("\n🎉 All tests passed! Your function sorter is working correctly!");
+      console.log("\n🎉 All tests passed! Function sorter is working correctly!");
     } else {
       console.log("\n⚠️  Some tests failed.");
     }
+  }
+
+  private discoverTestCases(): TestCase[] {
+    const inputDir = path.join(this.testCasesDir, "input");
+
+    if (!fs.existsSync(inputDir)) {
+      console.log(`❌ Input directory not found: ${inputDir}`);
+      return [];
+    }
+
+    const files = fs.readdirSync(inputDir);
+    const testFiles = files.filter(file => file.endsWith(".ts") || file.endsWith(".tsx"));
+
+    return testFiles.map(file => ({
+      expectedFile: file,
+      inputFile: file,
+      name: file
+        .replace(/\.(ts|tsx)$/, "")
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, l => l.toUpperCase())
+    }));
   }
 
   private async runSingleTest(testCase: TestCase): Promise<boolean> {
@@ -96,8 +121,11 @@ class FunctionSortTester {
 
     console.log(`   📂 Processing input...`);
 
-    // sort the content
     const sortedContent = await this.functionSorter.sortContent(inputContent);
+
+    // Save the reorganized content to output folder for comparison
+    const tempOutputPath = path.join(this.testCasesDir, "output", testCase.inputFile);
+    fs.writeFileSync(tempOutputPath, sortedContent, "utf8");
 
     // Direct comparison - no normalization
     const matches = sortedContent === expectedContent;
@@ -129,20 +157,6 @@ class FunctionSortTester {
         diffCount++;
       }
     }
-  }
-}
-
-// Run tests if this file is executed directly
-async function main() {
-  try {
-    console.log("🚀 Function Sort Extension Test Suite");
-    console.log("=====================================\n");
-
-    const tester = new FunctionSortTester();
-    await tester.runAllTests();
-  } catch (err) {
-    console.error("Failed to run tests", err);
-    process.exit(1);
   }
 }
 
