@@ -68,17 +68,16 @@
     "url": "https://github.com/all4peace/sort-code-plugin"
   },
   "scripts": {
-    "build": "node esbuild.js",
-    "build:dev": "node esbuild.js",
-    "build:prod": "node esbuild.js --production",
+    "build": "node esbuild.mjs",
+    "build:dev": "node esbuild.mjs",
+    "build:prod": "node esbuild.mjs --production",
     "clean": "rm -rf ./dist",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "pretest": "npm run compile && npm run lint",
     "test": "tsx src/test/runTest.ts",
     "vscode:prepublish": "npm run build:prod",
-    "watch": "node esbuild.js --watch"
+    "watch": "node esbuild.mjs --watch"
   },
-  "type": "module",
-  "version": "1.1.0"
+  "version": "1.1.1"
 }
