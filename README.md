@@ -1,11 +1,11 @@
 # Sort Code Plugin
 
-A VS Code extension that sorts TypeScript and JavaScript code elements alphabetically with intelligent grouping and CodeMaid-style class member ordering.
+A VS Code extension that sorts TypeScript and JavaScript code elements alphabetically with intelligent grouping and class member ordering.
 
 ## Features
 
 - **Comprehensive Code Sorting**: Sorts functions, variables, classes, interfaces, enums, and exports
-- **CodeMaid-Style Class Member Ordering**: Follows priority-based sorting within classes:
+- **Class Member Ordering**: Follows priority-based sorting within classes:
   - Constructor first
   - Public static methods
   - Public methods
@@ -56,7 +56,7 @@ Elements are grouped and sorted in this order:
 
 ### Class Members
 
-Within classes, members are sorted using CodeMaid-style priorities:
+Within classes, members are sorted using priorities:
 
 1. **Constructor** - Always first
 2. **Public static methods** - Sorted alphabetically
@@ -79,7 +79,7 @@ This extension does not contribute any settings currently.
 Initial release featuring:
 
 - Comprehensive code sorting for TypeScript and JavaScript
-- CodeMaid-style class member ordering
+- class member ordering
 - Support for all function types and file extensions
 - Smart export default handling
 - Multi-line statement support

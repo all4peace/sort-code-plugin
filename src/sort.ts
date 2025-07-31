@@ -173,7 +173,7 @@ export class CodeSorter {
    * Get priority for sorting parts
    */
   private getPriority(part: CodePart): number {
-    // Handle class members with CodeMaid-style priority
+    // Handle class members priority
     if (part.type === "constructor") {
       return 1; // Constructor first
     }
