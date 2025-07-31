@@ -41,7 +41,6 @@
       ]
     }
   },
-  "dependencies": {},
   "description": "Sort TypeScript and JavaScript functions alphabetically with public functions on top. Supports .ts, .js, .tsx, .jsx, .mjs, .cjs, .mts, .cts files",
   "devDependencies": {
     "@types/node": "16.x",
@@ -53,6 +52,7 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-sort-keys-fix": "^1.1.2",
     "prettier": "^3.6.1",
+    "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
     "typescript": "^4.9.4"
   },
@@ -60,6 +60,7 @@
   "engines": {
     "vscode": "^1.74.0"
   },
+  "icon": "icon.png",
   "main": "./dist/extension.js",
   "name": "sort-code-plugin",
   "publisher": "salammorcos",
@@ -68,16 +69,17 @@
     "url": "https://github.com/all4peace/sort-code-plugin"
   },
   "scripts": {
-    "build": "node esbuild.mjs",
-    "build:dev": "node esbuild.mjs",
-    "build:prod": "node esbuild.mjs --production",
-    "clean": "rm -rf ./dist",
+    "build": "npm run clean && node esbuild.mjs",
+    "build:dev": "npm run clean && node esbuild.mjs",
+    "build:prod": "npm run clean && node esbuild.mjs --production",
+    "clean": "rimraf ./dist",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "pretest": "npm run compile && npm run lint",
     "test": "tsx src/test/runTest.ts",
+    "vscode:package": "npm run build:prod && vsce package",
     "vscode:prepublish": "npm run build:prod",
     "watch": "node esbuild.mjs --watch"
   },
-  "version": "1.1.1"
+  "version": "1.1.2"
 }

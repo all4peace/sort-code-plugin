@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 
 import { CodeSorter } from "../sort.js";
 
@@ -30,9 +29,6 @@ class FunctionSortTester {
   private functionSorter: CodeSorter;
 
   constructor() {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
     this.testCasesDir = path.resolve(__dirname, "../../test-cases");
     this.functionSorter = new CodeSorter();
   }
