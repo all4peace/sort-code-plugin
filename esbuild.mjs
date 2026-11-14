@@ -3,43 +3,24 @@ import esbuild from "esbuild";
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
 
-/**
- * @type {import('esbuild').BuildOptions}
- */
-const esbuildConfig = {
-  entryPoints: ["src/extension.ts"],
+/** @type {import('esbuild').BuildOptions} */
+const config = {
   bundle: true,
+  entryPoints: ["src/extension.ts"],
+  // `typescript` is bundled on purpose: VS Code does not expose its copy to extensions.
+  external: ["vscode"],
   format: "cjs",
+  logLevel: "info",
   minify: production,
-  sourcemap: false, // Never generate .map files
-  sourcesContent: false,
-  platform: "node",
   outfile: "dist/extension.js",
-  external: ["vscode", "typescript"],
-  logLevel: "silent",
-  plugins: [
-    // Simple plugin to handle external modules
-    {
-      name: "external-modules",
-      setup(build) {
-        // Mark vscode and typescript as external
-        build.onResolve({ filter: /^(vscode|typescript)$/ }, args => {
-          return { path: args.path, external: true };
-        });
-      }
-    }
-  ]
+  platform: "node",
+  sourcemap: !production,
+  target: "node18"
 };
 
 if (watch) {
-  console.log("[watch] build started");
-  esbuild
-    .context(esbuildConfig)
-    .then(ctx => {
-      ctx.watch();
-      console.log("[watch] build finished");
-    })
-    .catch(() => process.exit(1));
+  const ctx = await esbuild.context(config);
+  await ctx.watch();
 } else {
-  esbuild.build(esbuildConfig).catch(() => process.exit(1));
+  await esbuild.build(config);
 }

@@ -1,7 +1,8 @@
-# Everything except the bundled output
+# Ship only the bundle and metadata
 **/*
 !dist/extension.js
 !package.json
 !LICENSE
 !README.md
+!docs/SORTING_RULES.md
 !icon.png

@@ -7,7 +7,7 @@ import sortKeysFix from "eslint-plugin-sort-keys-fix";
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "test-cases/**"]
+    ignores: ["dist/**", "node_modules/**", "out-tsc/**", "scratch/**", "test/fixtures/**", "test/runtime/**", "esbuild.mjs", "eslint.config.mjs"]
   },
   js.configs.recommended,
   {
@@ -70,7 +70,6 @@ export default [
       "@typescript-eslint/no-inferrable-types": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-      "@typescript-eslint/member-ordering": "warn",
       "sort-keys-fix/sort-keys-fix": "warn",
       "no-undef": "off",
       "no-unused-vars": "off"

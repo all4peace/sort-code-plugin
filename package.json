@@ -1,50 +1,381 @@
 {
-  "activationEvents": [
-    "onLanguage:typescript",
-    "onLanguage:javascript",
-    "onLanguage:typescriptreact",
-    "onLanguage:javascriptreact"
-  ],
+  "name": "sort-code-plugin",
+  "displayName": "Sort Code (CodeMaid-style member sorting)",
+  "description": "Alphabetize members CodeMaid-style for C#, TypeScript and JavaScript: public first, then internal, then private. Comments travel with their member. Sorts on save, safely.",
+  "version": "2.0.0",
+  "publisher": "salammorcos",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/all4peace/sort-code-plugin"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
   "categories": [
     "Formatters",
     "Other"
+  ],
+  "keywords": [
+    "codemaid",
+    "sort",
+    "reorganize",
+    "alphabetize",
+    "members",
+    "csharp",
+    "typescript"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:csharp",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact"
   ],
   "contributes": {
     "commands": [
       {
         "category": "Sort Code",
-        "command": "sortCodePlugin.sortCurrentFile",
-        "title": "Sort Functions in Current File"
+        "command": "sortCode.sortCurrentFile",
+        "title": "Sort Current File"
+      },
+      {
+        "category": "Sort Code",
+        "command": "sortCode.sortWorkspace",
+        "title": "Sort All Files in Workspace"
+      },
+      {
+        "category": "Sort Code",
+        "command": "sortCode.cancelSortWorkspace",
+        "title": "Cancel Sort All",
+        "enablement": "sortCode.sortAllRunning"
+      },
+      {
+        "category": "Sort Code",
+        "command": "sortCode.showHazards",
+        "title": "Show Sorting Hazards in Current File"
       }
     ],
     "keybindings": [
       {
-        "command": "sortCodePlugin.sortCurrentFile",
+        "command": "sortCode.sortCurrentFile",
         "key": "ctrl+m ctrl+z",
         "mac": "cmd+m cmd+z",
-        "when": "editorTextFocus && (editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact)"
+        "when": "editorTextFocus && sortCode.supported"
+      },
+      {
+        "command": "sortCode.cancelSortWorkspace",
+        "key": "ctrl+c",
+        "mac": "ctrl+c",
+        "when": "sortCode.sortAllRunning"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "sortCodePlugin.sortCurrentFile",
-          "when": "editorLangId == typescript || editorLangId == javascript || editorLangId == typescriptreact || editorLangId == javascriptreact || resourceExtname =~ /\\.(ts|js|tsx|jsx|mjs|cjs|mts|cts)$/"
+          "command": "sortCode.sortCurrentFile",
+          "when": "sortCode.supported"
+        },
+        {
+          "command": "sortCode.showHazards",
+          "when": "sortCode.supported"
+        },
+        {
+          "command": "sortCode.cancelSortWorkspace",
+          "when": "sortCode.sortAllRunning"
         }
       ],
       "editor/context": [
         {
-          "command": "sortCodePlugin.sortCurrentFile",
+          "command": "sortCode.sortCurrentFile",
           "group": "1_modification",
-          "when": "resourceExtname =~ /\\.(ts|js|tsx|jsx|mjs|cjs|mts|cts)$/"
+          "when": "sortCode.supported"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sortCode.sortWorkspace",
+          "group": "7_modification",
+          "when": "explorerResourceIsFolder"
         }
       ]
-    }
+    },
+    "configuration": {
+      "title": "Sort Code",
+      "properties": {
+        "sortCode.fileTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              ".cs",
+              ".ts",
+              ".tsx",
+              ".mts",
+              ".cts",
+              ".js",
+              ".jsx",
+              ".mjs",
+              ".cjs"
+            ]
+          },
+          "default": [
+            ".cs",
+            ".ts",
+            ".tsx",
+            ".mts",
+            ".cts",
+            ".js",
+            ".jsx",
+            ".mjs",
+            ".cjs"
+          ],
+          "markdownDescription": "File extensions that are sorted. Remove an extension to turn sorting off for it."
+        },
+        "sortCode.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*"
+          ],
+          "markdownDescription": "Glob patterns (relative to the workspace folder) of files to sort. A file must match at least one."
+        },
+        "sortCode.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra glob patterns to never sort. Wins over `sortCode.include`. Built-in excludes are listed in `sortCode.useBuiltInExcludes`."
+        },
+        "sortCode.useBuiltInExcludes": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Always skip `node_modules`, `local_modules`, `dist`, `bin`, `obj`, `.git`, `.vs`, `out`, `build`, `coverage`, `.next`, generated files (`*.Designer.cs`, `*.g.cs`, `*.g.i.cs`, `*.generated.*`, `*.min.js`, `*.d.ts`)."
+        },
+        "sortCode.maxFileSizeKB": {
+          "type": "number",
+          "default": 512,
+          "description": "Files larger than this are never sorted."
+        },
+        "sortCode.primarySort": {
+          "type": "string",
+          "enum": [
+            "kind",
+            "access"
+          ],
+          "enumDescriptions": [
+            "CodeMaid default: group by member kind (fields, constructors, properties, methods\u2026), then public \u2192 internal \u2192 private inside each kind.",
+            "All public members first (fields, properties, methods\u2026), then internal, then private."
+          ],
+          "default": "kind"
+        },
+        "sortCode.accessOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "public",
+              "internal",
+              "protectedInternal",
+              "protected",
+              "privateProtected",
+              "private"
+            ]
+          },
+          "default": [
+            "public",
+            "internal",
+            "protectedInternal",
+            "protected",
+            "privateProtected",
+            "private"
+          ],
+          "description": "Order of access levels. In TS/JS, exported top-level declarations count as public and non-exported as private."
+        },
+        "sortCode.staticFirst": {
+          "type": "boolean",
+          "default": true,
+          "description": "Put const/static members before instance members of the same kind and access."
+        },
+        "sortCode.fieldOrder": {
+          "type": "string",
+          "enum": [
+            "sortWhenSafe",
+            "preserve",
+            "sort"
+          ],
+          "enumDescriptions": [
+            "Alphabetize fields unless an initializer reads another field, or the type is a struct / [StructLayout] (memory layout).",
+            "Never reorder fields; they stay grouped in their original order.",
+            "Always alphabetize fields (can change behaviour \u2014 see docs)."
+          ],
+          "default": "sortWhenSafe"
+        },
+        "sortCode.detachedComments": {
+          "type": "string",
+          "enum": [
+            "attach",
+            "boundary"
+          ],
+          "enumDescriptions": [
+            "A comment separated from the next member by a blank line still moves with that member.",
+            "A comment separated by a blank line stays where it is and acts as a section divider; sorting happens within sections."
+          ],
+          "default": "attach"
+        },
+        "sortCode.csharp.memberOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "field",
+              "constructor",
+              "destructor",
+              "delegate",
+              "event",
+              "enum",
+              "interface",
+              "property",
+              "indexer",
+              "method",
+              "struct",
+              "class"
+            ]
+          },
+          "default": [
+            "field",
+            "constructor",
+            "destructor",
+            "delegate",
+            "event",
+            "enum",
+            "interface",
+            "property",
+            "indexer",
+            "method",
+            "struct",
+            "class"
+          ],
+          "description": "C# member kind order (CodeMaid default). Records sort as class / struct."
+        },
+        "sortCode.csharp.sortTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also sort type declarations inside a namespace / file."
+        },
+        "sortCode.typescript.memberOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "indexSignature",
+              "field",
+              "constructor",
+              "accessor",
+              "method"
+            ]
+          },
+          "default": [
+            "indexSignature",
+            "field",
+            "constructor",
+            "accessor",
+            "method"
+          ],
+          "description": "TS/JS class member kind order."
+        },
+        "sortCode.typescript.topLevelOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "type",
+              "enum",
+              "variable",
+              "function",
+              "class"
+            ]
+          },
+          "default": [
+            "type",
+            "enum",
+            "variable",
+            "function",
+            "class"
+          ],
+          "markdownDescription": "TS/JS top-level order. `type` = interfaces and type aliases, `variable` = `const` with a side-effect-free initializer, `function` = function declarations and `const x = () => \u2026`."
+        },
+        "sortCode.typescript.sortTopLevel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sort top-level declarations (only the ones that are safe to move)."
+        },
+        "sortCode.typescript.sortClassMembers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sort class members."
+        },
+        "sortCode.typescript.arrowFunctionPropertiesAsMethods": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Treat `handleClick = () => {}` class properties as methods."
+        },
+        "sortCode.typescript.underscoreIsPrivate": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Treat `_name` members as private (useful for plain JavaScript)."
+        },
+        "sortCode.showHazards": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show places where sorting was skipped or restricted in the Problems panel."
+        }
+      }
+    },
+    "codeActions": [
+      {
+        "languages": [
+          "csharp",
+          "typescript",
+          "typescriptreact",
+          "javascript",
+          "javascriptreact"
+        ],
+        "actions": {
+          "kind": "source.sortCode",
+          "title": "Sort members",
+          "description": "Alphabetize members CodeMaid-style (public \u2192 internal \u2192 private). Add \"source.sortCode\": \"explicit\" to editor.codeActionsOnSave to run it on save."
+        }
+      }
+    ]
   },
-  "description": "Sort TypeScript and JavaScript functions alphabetically with public functions on top. Supports .ts, .js, .tsx, .jsx, .mjs, .cjs, .mts, .cts files",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "build:prod": "node esbuild.mjs --production",
+    "watch": "node esbuild.mjs --watch",
+    "sort": "tsx src/cli.ts",
+    "typecheck": "tsc -p ./ --noEmit",
+    "lint": "eslint src",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "test:update": "UPDATE_SNAPSHOTS=1 node --import tsx --test \"test/**/*.test.ts\"",
+    "test:corpus": "tsx test/corpus.ts",
+    "vscode:prepublish": "npm run build:prod",
+    "vscode:package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.2",
+    "typescript": "~5.9.3"
+  },
   "devDependencies": {
-    "@types/node": "16.x",
-    "@types/vscode": "^1.74.0",
+    "@eslint/js": "^9.29.0",
+    "@types/node": "^22.0.0",
+    "@types/picomatch": "^4.0.0",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
     "esbuild": "^0.25.6",
@@ -52,34 +383,6 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-sort-keys-fix": "^1.1.2",
     "prettier": "^3.6.1",
-    "rimraf": "^6.0.1",
-    "tsx": "^4.19.2",
-    "typescript": "^4.9.4"
-  },
-  "displayName": "Sort Code Functions",
-  "engines": {
-    "vscode": "^1.74.0"
-  },
-  "icon": "icon.png",
-  "main": "./dist/extension.js",
-  "name": "sort-code-plugin",
-  "publisher": "salammorcos",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/all4peace/sort-code-plugin"
-  },
-  "scripts": {
-    "build": "npm run clean && node esbuild.mjs",
-    "build:dev": "npm run clean && node esbuild.mjs",
-    "build:prod": "npm run clean && node esbuild.mjs --production",
-    "clean": "rimraf ./dist",
-    "compile": "tsc -p ./",
-    "lint": "eslint src --ext ts",
-    "pretest": "npm run compile && npm run lint",
-    "test": "tsx src/test/runTest.ts",
-    "vscode:package": "npm run build:prod && vsce package",
-    "vscode:prepublish": "npm run build:prod",
-    "watch": "node esbuild.mjs --watch"
-  },
-  "version": "1.1.3"
+    "tsx": "^4.19.2"
+  }
 }

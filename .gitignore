@@ -111,5 +111,7 @@ dev/*
 # Temporary files
 temp
 
-# Output files
-test-cases/output/*
+# Local build / scratch
+out-tsc
+scratch
+*.vsix

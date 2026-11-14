@@ -1,0 +1,3 @@
+# Golden files must keep their exact bytes (CRLF fixtures, BOMs).
+test/fixtures/** -text
+test/runtime/** -text
