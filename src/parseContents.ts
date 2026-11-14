@@ -1,15 +1,5 @@
 import type { CodePart } from "./CodePart.js";
 
-interface ParseState {
-  inSingleQuote: boolean;
-  inDoubleQuote: boolean;
-  inTemplateString: boolean;
-  inSingleLineComment: boolean;
-  inMultiLineComment: boolean;
-  bracketStack: string[]; // Stack to track opening brackets and ensure proper matching
-  escaped: boolean;
-}
-
 /**
  * Custom line-by-line parser that captures everything exactly as written
  * Preserves formatting, comments, and handles complex multi-line statements
@@ -176,17 +166,7 @@ export class LineByLineParser {
     const codePart = this.createCodeBlockPart(startIndex + 1, trimmedStart);
     let content = "";
     let lineIndex = startIndex;
-    let state: ParseState = {
-      bracketStack: [],
-      escaped: false,
-      inDoubleQuote: false,
-      inMultiLineComment: false,
-      inSingleLineComment: false,
-      inSingleQuote: false,
-      inTemplateString: false
-    };
-
-    let foundOpenBrace = false;
+    let sections: string[] = [];
 
     while (lineIndex < lines.length) {
       const line = lines[lineIndex];
@@ -196,132 +176,148 @@ export class LineByLineParser {
       for (let charIndex = 0; charIndex < line.length; charIndex++) {
         const char = line[charIndex];
         const nextChar = charIndex < line.length - 1 ? line[charIndex + 1] : "";
+        const lastSection = sections[sections.length - 1] || "";
 
-        // Handle escape sequences
-        if (state.escaped) {
-          state.escaped = false;
+        if (lastSection === "/*") {
+          if (char === "*" && nextChar === "/") {
+            sections.pop();
+            charIndex++; // Skip the /
+          }
           continue;
         }
 
-        if (char === "\\" && (state.inSingleQuote || state.inDoubleQuote || state.inTemplateString)) {
-          state.escaped = true;
+        // Handle regex literals
+        if (lastSection === "/regex") {
+          if (char === "/") {
+            // Check if this is an unescaped closing /
+            let escapeCount = 0;
+            let checkIndex = charIndex - 1;
+            while (checkIndex >= 0 && line[checkIndex] === "\\") {
+              escapeCount++;
+              checkIndex--;
+            }
+            // If even number of escapes (including 0), the / is not escaped
+            if (escapeCount % 2 === 0) {
+              // Look ahead for regex flags (dgimsuvy)
+              let flagIndex = charIndex + 1;
+              while (flagIndex < line.length && /[dgimsuvy]/.test(line[flagIndex])) {
+                flagIndex++;
+              }
+              // Skip to end of flags
+              charIndex = flagIndex - 1;
+              sections.pop(); // End regex
+            }
+          }
+          continue;
+        }
+
+        const inString = lastSection === "'" || lastSection === '"' || lastSection === "`";
+
+        // Handle escaping in strings
+        if (char === "\\" && inString) {
+          charIndex++; // Skip next character (it's escaped)
+          continue;
+        }
+
+        // If we're in a string, only look for the closing quote
+        if (inString) {
+          if (char === lastSection) {
+            sections.pop(); // Close the string
+          }
+          continue;
+        }
+
+        // Handle opening strings/quotes
+        if (char === "'" || char === '"' || char === "`") {
+          sections.push(char);
           continue;
         }
 
         // Handle comments
-        if (!state.inSingleQuote && !state.inDoubleQuote && !state.inTemplateString) {
-          if (char === "/" && nextChar === "/" && !state.inMultiLineComment) {
-            state.inSingleLineComment = true;
-            continue;
-          }
-
-          if (char === "/" && nextChar === "*" && !state.inSingleLineComment) {
-            state.inMultiLineComment = true;
-            charIndex++; // Skip the *
-            continue;
-          }
-
-          if (char === "*" && nextChar === "/" && state.inMultiLineComment) {
-            state.inMultiLineComment = false;
-            charIndex++; // Skip the /
-            continue;
-          }
+        if (char === "/" && nextChar === "/") {
+          // Single line comment - skip rest of line
+          break; // Move to next line
         }
 
-        // Skip if we're in any kind of comment
-        if (state.inSingleLineComment || state.inMultiLineComment) {
+        if (char === "/" && nextChar === "*") {
+          sections.push("/*");
+          charIndex++; // Skip the *
           continue;
         }
 
-        // Handle quotes
-        if (char === '"' && !state.inSingleQuote && !state.inTemplateString) {
-          state.inDoubleQuote = !state.inDoubleQuote;
-          continue;
-        }
+        // Handle regex literals - must come after comment detection
+        if (char === "/" && nextChar !== "*" && nextChar !== "/") {
+          // Check if this could be a regex literal
+          // Must not be preceded by alphanumeric character
+          const prevNonWhitespaceChar = this.getPreviousNonWhitespaceChar(content, lineIndex, charIndex);
+          const isAlphanumeric = prevNonWhitespaceChar && /[a-zA-Z0-9_]/.test(prevNonWhitespaceChar);
 
-        if (char === "'" && !state.inDoubleQuote && !state.inTemplateString) {
-          state.inSingleQuote = !state.inSingleQuote;
-          continue;
-        }
+          // Regex is likely if not preceded by alphanumeric and preceded by operators or at start
+          const regexPrecedingChars = [
+            "=",
+            "(",
+            "[",
+            "{",
+            ":",
+            ";",
+            "!",
+            "&",
+            "|",
+            "?",
+            "+",
+            "-",
+            "*",
+            "/",
+            "%",
+            "^",
+            "~",
+            "<",
+            ">",
+            ",",
+            "\n"
+          ];
 
-        if (char === "`" && !state.inSingleQuote && !state.inDoubleQuote) {
-          state.inTemplateString = !state.inTemplateString;
-          continue;
-        }
-
-        // Handle braces, parens, brackets (only when not in quotes or comments)
-        if (!state.inSingleQuote && !state.inDoubleQuote && !state.inTemplateString) {
-          if (char === "{" || char === "(" || char === "[") {
-            state.bracketStack.push(char);
-            if (char === "{") {
-              foundOpenBrace = true;
+          if (
+            !isAlphanumeric &&
+            (prevNonWhitespaceChar === null || regexPrecedingChars.includes(prevNonWhitespaceChar))
+          ) {
+            // Forward look to validate this is actually a regex
+            const regexResult = this.validateAndParseRegex(line, charIndex);
+            if (regexResult.isRegex) {
+              // Skip to the end of the regex (including flags)
+              charIndex = regexResult.endIndex;
+              continue;
             }
-          } else if (char === "}" || char === ")" || char === "]") {
-            if (state.bracketStack.length === 0) {
-              throw new Error(
-                `Unexpected closing bracket '${char}' at line ${lineIndex + 1}. No matching opening bracket found.`
-              );
-            }
-
-            const lastOpening = state.bracketStack[state.bracketStack.length - 1];
-            const expectedClosing = this.getMatchingClosingBracket(lastOpening);
-
-            if (char !== expectedClosing) {
-              throw new Error(
-                `Mismatched brackets at line ${lineIndex + 1}. Expected '${expectedClosing}' to close '${lastOpening}', but found '${char}'.`
-              );
-            }
-
-            state.bracketStack.pop();
           }
         }
-      }
 
-      // Reset single line comment state at end of line
-      state.inSingleLineComment = false;
+        // Handle opening brackets
+        if (char === "{" || char === "[" || char === "(") {
+          sections.push(char);
+          continue;
+        }
 
-      // Check if we've completed the block
-      if (foundOpenBrace && state.bracketStack.length === 0) {
-        // Include any trailing semicolon or whitespace on the same line
-        const remaining = line.substring(line.lastIndexOf("}")).trim();
-        if (remaining === "}" || remaining === "};") {
-          break;
+        // Handle closing brackets
+        if (char === "}" || char === "]" || char === ")") {
+          const expectedOpening = this.getMatchingOpeningBracket(char);
+
+          if (sections.length === 0 || sections[sections.length - 1] !== expectedOpening) {
+            throw new Error(
+              `Mismatched brackets at line ${lineIndex + 1}. Expected '${expectedOpening}' but found '${sections[sections.length - 1] || "nothing"}'.`
+            );
+          }
+
+          sections.pop(); // Remove the matching opening bracket
+          continue;
         }
       }
 
       lineIndex++;
     }
 
-    // Check for unclosed strings/quotes
-    if (state.inSingleQuote) {
-      throw new Error(
-        `Unclosed single quote starting at line ${startIndex + 1}. Expected closing "'" but reached end of file.`
-      );
-    }
-    if (state.inDoubleQuote) {
-      throw new Error(
-        `Unclosed double quote starting at line ${startIndex + 1}. Expected closing '"' but reached end of file.`
-      );
-    }
-    if (state.inTemplateString) {
-      throw new Error(
-        `Unclosed template string starting at line ${startIndex + 1}. Expected closing '\`' but reached end of file.`
-      );
-    }
-    if (state.inMultiLineComment) {
-      throw new Error(
-        `Unclosed multi-line comment starting at line ${startIndex + 1}. Expected closing '*/' but reached end of file.`
-      );
-    }
-
-    // Check for unclosed braces/brackets
-    if (state.bracketStack.length > 0) {
-      const unclosedBrackets = state.bracketStack
-        .map(bracket => {
-          return `'${bracket}' expecting '${this.getMatchingClosingBracket(bracket)}'`;
-        })
-        .join(", ");
-      throw new Error(`Unclosed brackets starting at line ${startIndex + 1}. Unclosed: ${unclosedBrackets}`);
+    // If we reach here, we didn't find a proper closing bracket
+    if (sections.length !== 0) {
+      throw new Error(`Unclosed '${sections[sections.length - 1]}' starting at line ${startIndex + 1}.`);
     }
 
     codePart.content = content;
@@ -645,7 +641,7 @@ export class LineByLineParser {
     }
 
     // Check for regular function declarations (including async)
-    if (line.includes("function")) return "function";
+    if (/\bfunction\b/.test(line)) return "function";
 
     return "variable"; // Default
   }
@@ -709,15 +705,101 @@ export class LineByLineParser {
   }
 
   /**
-   * Get the matching closing bracket for an opening bracket
+   * Get the matching opening bracket for a closing bracket
    */
-  private getMatchingClosingBracket(openingBracket: string): string {
+  private getMatchingOpeningBracket(closingBracket: string): string {
     const bracketMap: { [key: string]: string } = {
-      "(": ")",
-      "[": "]",
-      "{": "}"
+      ")": "(",
+      "]": "[",
+      "}": "{"
     };
-    return bracketMap[openingBracket] || "";
+    return bracketMap[closingBracket] || "";
+  }
+
+  /**
+   * Get the previous non-whitespace character from the content
+   */
+  private getPreviousNonWhitespaceChar(
+    content: string,
+    currentLineIndex: number,
+    currentCharIndex: number
+  ): string | null {
+    // Start from the character before current position
+    let lineIndex = currentLineIndex;
+    let charIndex = currentCharIndex - 1;
+
+    const lines = content.split("\n");
+
+    while (lineIndex >= 0) {
+      const line = lines[lineIndex] || "";
+
+      while (charIndex >= 0) {
+        const char = line[charIndex];
+        if (char && char.trim() !== "") {
+          return char;
+        }
+        charIndex--;
+      }
+
+      // Move to previous line
+      lineIndex--;
+      if (lineIndex >= 0) {
+        charIndex = (lines[lineIndex] || "").length - 1;
+      }
+    }
+
+    return null; // No non-whitespace character found
+  }
+
+  /**
+   * Validate and parse a potential regex literal by looking ahead
+   */
+  private validateAndParseRegex(line: string, startIndex: number): { endIndex: number; isRegex: boolean } {
+    let index = startIndex + 1; // Skip the opening /
+    let foundClosing = false;
+
+    while (index < line.length) {
+      const char = line[index];
+
+      // Handle escape sequences
+      if (char === "\\") {
+        index += 2; // Skip the escaped character
+        continue;
+      }
+
+      // Found potential closing /
+      if (char === "/") {
+        foundClosing = true;
+        index++; // Move past the /
+        break;
+      }
+
+      // If we hit a newline, this isn't a valid regex
+      if (char === "\n") {
+        return { endIndex: startIndex, isRegex: false };
+      }
+
+      index++;
+    }
+
+    if (!foundClosing) {
+      return { endIndex: startIndex, isRegex: false };
+    }
+
+    // Look for regex flags (dgimsuvy)
+    while (index < line.length && /[dgimsuvy]/.test(line[index])) {
+      index++;
+    }
+
+    // Check what comes after the regex - should be non-alphanumeric or end of line
+    if (index < line.length) {
+      const nextChar = line[index];
+      if (/[a-zA-Z0-9_]/.test(nextChar)) {
+        return { endIndex: startIndex, isRegex: false };
+      }
+    }
+
+    return { endIndex: index - 1, isRegex: true };
   }
 
   /**

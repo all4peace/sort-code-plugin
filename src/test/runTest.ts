@@ -17,7 +17,16 @@ async function main() {
 
     const tester = new FunctionSortTester();
 
-    await tester.runAllTests();
+    // Check for command line arguments
+    const args = process.argv.slice(2);
+    const filenameIndex = args.indexOf("--filename");
+
+    if (filenameIndex !== -1 && filenameIndex + 1 < args.length) {
+      const filename = args[filenameIndex + 1];
+      await tester.runSingleTestByFilename(filename);
+    } else {
+      await tester.runAllTests();
+    }
   } catch (err) {
     console.error("Failed to run tests", err);
     process.exit(1);
@@ -31,6 +40,33 @@ class FunctionSortTester {
   constructor() {
     this.testCasesDir = path.resolve(__dirname, "../../test-cases");
     this.functionSorter = new CodeSorter();
+  }
+
+  async runSingleTestByFilename(filename: string): Promise<void> {
+    console.log(`🧪 Running Single Test: ${filename}`);
+    console.log("================================");
+
+    const testCases = this.discoverTestCases();
+    const testCase = testCases.find(tc => tc.inputFile === filename);
+
+    if (!testCase) {
+      console.log(`❌ Test file not found: ${filename}`);
+      console.log(`Available test files:`);
+      testCases.forEach(tc => console.log(`   - ${tc.inputFile}`));
+      return;
+    }
+
+    try {
+      console.log(`\n📋 Testing: ${testCase.name}`);
+      const passed = await this.runSingleTest(testCase);
+      if (passed) {
+        console.log(`✅ ${testCase.name}: PASSED`);
+      } else {
+        console.log(`❌ ${testCase.name}: FAILED`);
+      }
+    } catch (error) {
+      console.log(`💥 ${testCase.name}: ERROR - ${error}`);
+    }
   }
 
   async runAllTests(): Promise<void> {
@@ -88,13 +124,15 @@ class FunctionSortTester {
     }
 
     const files = fs.readdirSync(inputDir);
-    const testFiles = files.filter(file => file.endsWith(".ts") || file.endsWith(".tsx"));
+    const testFiles = files.filter(
+      file => file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".js") || file.endsWith(".mjs")
+    );
 
     return testFiles.map(file => ({
       expectedFile: file,
       inputFile: file,
       name: file
-        .replace(/\.(ts|tsx)$/, "")
+        .replace(/\.(ts|tsx|js|mjs)$/, "")
         .replace(/[-_]/g, " ")
         .replace(/\b\w/g, l => l.toUpperCase())
     }));

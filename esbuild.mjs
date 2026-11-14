@@ -1,9 +1,4 @@
 import esbuild from "esbuild";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
