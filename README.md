@@ -40,7 +40,7 @@ public class OrderService                   public class OrderService
 | Command | Mac | Windows / Linux |
 |---|---|---|
 | Sort Code: Sort Current File | `Cmd+M Cmd+Z` | `Ctrl+M Ctrl+Z` |
-| File: Save without Formatting (built-in, skips sorting) | `Cmd+K S` | `Ctrl+K S` |
+| Sort Code: Save Without Sorting (same as built-in *File: Save without Formatting*) | `Cmd+K S` | `Ctrl+K S` |
 | Source Action… → **Sort members** | right-click → Source Action… | |
 | Sort Code: Sort All Files in Workspace | Command Palette, or right-click a folder in Explorer | |
 | Sort Code: Cancel Sort All | `Ctrl+C` while Sort All runs | `Ctrl+C` |
@@ -192,6 +192,9 @@ npm run typecheck && npm run lint && npm test
 Press **F5** in VS Code to launch an Extension Development Host. `npx @vscode/vsce package` builds the `.vsix`.
 
 ## Release notes
+
+### 2.0.1
+All commands always visible in the Command Palette; new **Save Without Sorting** command.
 
 ### 2.0.0
 Complete redesign: C# support, CodeMaid ordering, real parsers, hazard detection and reporting, opt-in sort on save via `codeActionsOnSave` (`source.sortCode`), Sort All with progress and cancellation, include/exclude settings, new test suite.

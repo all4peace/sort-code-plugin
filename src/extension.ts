@@ -82,7 +82,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand("sortCode.sortCurrentFile", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor) return;
+      if (!editor) {
+        vscode.window.showWarningMessage("Sort Code: open a .cs, .ts, .tsx, .js or .jsx file first.");
+        return;
+      }
       const doc = editor.document;
       if (!isSupportedType(doc, readSettings(doc.uri))) {
         vscode.window.showWarningMessage("Sort Code: this file type is not enabled (sortCode.fileTypes).");
@@ -101,6 +104,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       refreshDiagnostics(doc);
     }),
+
+    // Same as File: Save without Formatting (Cmd+K S): skips every on-save action, including source.sortCode.
+    vscode.commands.registerCommand("sortCode.saveWithoutSorting", () =>
+      vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting")
+    ),
 
     vscode.commands.registerCommand("sortCode.sortWorkspace", (folder?: vscode.Uri) => workspaceSorter.run(folder)),
     vscode.commands.registerCommand("sortCode.cancelSortWorkspace", () => workspaceSorter.cancel()),

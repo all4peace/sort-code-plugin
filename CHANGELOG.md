@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- All commands are always available in the Command Palette (Sort Current File was hidden until the extension activated).
+- New **Sort Code: Save Without Sorting** command (same as File: Save without Formatting).
+
 ## 2.0.0
 
 - C# support with CodeMaid's Reorganize ordering (kind → access → static → name).

@@ -105,6 +105,29 @@ describe("extension", () => {
     assert.equal(diags[0]?.code?.value, "field-initializer-dependency");
   });
 
+  test("Save Without Sorting runs VS Code's Save without Formatting", async () => {
+    const calls: string[] = [];
+    const original = mock.vscode.commands.executeCommand;
+    mock.vscode.commands.executeCommand = async (id: string, ...a: unknown[]) => {
+      calls.push(id);
+      return original(id, ...a);
+    };
+    await mock.commands.get("sortCode.saveWithoutSorting")!();
+    assert.deepEqual(calls, ["workbench.action.files.saveWithoutFormatting"]);
+  });
+
+  test("every command is listed in the Command Palette", () => {
+     
+    const pkg = require("../package.json");
+    const hidden = pkg.contributes.menus.commandPalette.filter((m: { when?: string }) => m.when === "false");
+    assert.deepEqual(hidden, []);
+    const always = pkg.contributes.commands.map((c: { command: string }) => c.command);
+    const restricted = pkg.contributes.menus.commandPalette.map((m: { command: string }) => m.command);
+    assert.deepEqual(restricted, ["sortCode.cancelSortWorkspace"], "only Cancel Sort All is conditional");
+    for (const id of ["sortCode.sortCurrentFile", "sortCode.saveWithoutSorting", "sortCode.sortWorkspace", "sortCode.showHazards"]) assert.ok(always.includes(id), id);
+    for (const id of always) assert.ok(mock.commands.has(id), `${id} registered`);
+  });
+
   test("Sort Current File command sorts the active editor", async () => {
     const doc = mock.open(new MockDocument("/ws/src/a.ts", UNSORTED));
     await mock.commands.get("sortCode.sortCurrentFile")!();

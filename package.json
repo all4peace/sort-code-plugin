@@ -2,7 +2,7 @@
   "name": "sort-code-plugin",
   "displayName": "Sort Code (CodeMaid-style member sorting)",
   "description": "Alphabetize members CodeMaid-style for C#, TypeScript and JavaScript: public first, then internal, then private. Comments travel with their member. Sorts on save, safely.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "salammorcos",
   "license": "MIT",
   "icon": "icon.png",
@@ -43,6 +43,11 @@
       },
       {
         "category": "Sort Code",
+        "command": "sortCode.saveWithoutSorting",
+        "title": "Save Without Sorting"
+      },
+      {
+        "category": "Sort Code",
         "command": "sortCode.sortWorkspace",
         "title": "Sort All Files in Workspace"
       },
@@ -74,14 +79,6 @@
     ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "sortCode.sortCurrentFile",
-          "when": "sortCode.supported"
-        },
-        {
-          "command": "sortCode.showHazards",
-          "when": "sortCode.supported"
-        },
         {
           "command": "sortCode.cancelSortWorkspace",
           "when": "sortCode.sortAllRunning"
